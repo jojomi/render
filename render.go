@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"html/template"
 	"io/ioutil"
 	"net/http"
@@ -47,7 +46,6 @@ func NewAppRenderer() *AppRenderer {
 
 // ServePage function
 func (r *AppRenderer) ServePage(w http.ResponseWriter, req *http.Request, name string, data interface{}) {
-	fmt.Println("serving page", name)
 	tmpl, err := r.Template(name)
 	if err != nil {
 		r.ServeError(w, req, http.StatusInternalServerError, err, nil)
@@ -64,21 +62,11 @@ func (r *AppRenderer) ServePage(w http.ResponseWriter, req *http.Request, name s
 }
 
 func (r *AppRenderer) GetTemplateData(name string) ([]byte, error) {
-	// TODO implement using jojomi/asset
-	/*filepath := path.Join(r.TemplateDir, name)
-	fmt.Println("filepath", filepath)
-
-	data, err := ioutil.ReadFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil*/
 	return r.AssetHandler.Get(name)
 }
 
 func (r *AppRenderer) GetLayoutData(name string) ([]byte, error) {
-	// TODO implement using jojomi/asset
-	return nil, nil
+	return r.AssetHandler.Get(name)
 }
 
 // Template function
@@ -99,7 +87,6 @@ func (r *AppRenderer) Template(name string) (*template.Template, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("data", data)
 	return template.New(name).Funcs(funcMap).Parse(string(data))
 }
 
