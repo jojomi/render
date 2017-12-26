@@ -82,6 +82,9 @@ func (r *AppRenderer) Template(name string) (*template.Template, error) {
 			}
 			return outputFilename + "?" + hex.EncodeToString(hasher.Sum(nil))
 		},
+		"safeHTML": func(str string) template.HTML {
+			return template.HTML(str)
+		},
 	}
 	data, err := r.GetTemplateData(name)
 	if err != nil {
