@@ -2,12 +2,8 @@ package render
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"html/template"
-	"io/ioutil"
 	"net/http"
-	"strings"
 
 	"github.com/jojomi/asset"
 )
@@ -15,6 +11,7 @@ import (
 // Renderer interface
 type Renderer interface {
 	ServePage(w http.ResponseWriter, req *http.Request, name string, data interface{})
+	ServePageWithFuncs(w http.ResponseWriter, req *http.Request, name string, data interface{}, funcMap template.FuncMap)
 	ServeError(w http.ResponseWriter, req *http.Request, code int, err error, pageData interface{})
 	ErrorLogCallback(w http.ResponseWriter, req *http.Request, code int, err error) error
 
@@ -46,7 +43,17 @@ func NewAppRenderer() *AppRenderer {
 
 // ServePage function
 func (r *AppRenderer) ServePage(w http.ResponseWriter, req *http.Request, name string, data interface{}) {
-	tmpl, err := r.Template(name)
+	funcMap := template.FuncMap{
+		"safeHTML": SafeHTML,
+	}
+	r.ServePageWithFuncs(w, req, name, data, funcMap)
+}
+
+// ServePageWithFuncs function
+func (r *AppRenderer) ServePageWithFuncs(w http.ResponseWriter, req *http.Request, name string, data interface{}, funcMap template.FuncMap) {
+	funcMap["safeHTML"] = SafeHTML
+
+	tmpl, err := r.Template(name, funcMap)
 	if err != nil {
 		r.ServeError(w, req, http.StatusInternalServerError, err, nil)
 		return
@@ -70,22 +77,7 @@ func (r *AppRenderer) GetLayoutData(name string) ([]byte, error) {
 }
 
 // Template function
-func (r *AppRenderer) Template(name string) (*template.Template, error) {
-	funcMap := template.FuncMap{
-		"StringsJoin": strings.Join,
-		"SHAFile": func(outputFilename, fsFilename string) string {
-			hasher := sha256.New()
-			s, err := ioutil.ReadFile(fsFilename)
-			hasher.Write(s)
-			if err != nil {
-				return outputFilename // error case, fallback to filename only, file might not exist
-			}
-			return outputFilename + "?" + hex.EncodeToString(hasher.Sum(nil))
-		},
-		"safeHTML": func(str string) template.HTML {
-			return template.HTML(str)
-		},
-	}
+func (r *AppRenderer) Template(name string, funcMap template.FuncMap) (*template.Template, error) {
 	data, err := r.GetTemplateData(name)
 	if err != nil {
 		return nil, err
@@ -104,4 +96,8 @@ func (r *AppRenderer) ErrorLogCallback(w http.ResponseWriter, req *http.Request,
 		return nil
 	}
 	return r.errorLogCallback(w, req, code, err)
+}
+
+var SafeHTML = func(str string) template.HTML {
+	return template.HTML(str)
 }
