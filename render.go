@@ -18,6 +18,7 @@ type Renderer interface {
 	GetTemplateData(name string) ([]byte, error)
 	GetLayoutData(name string) ([]byte, error)
 
+	SetDelims(left, right string)
 	SetErrorLogCallback(ecb ErrorCallback)
 }
 
@@ -29,6 +30,8 @@ type AppRenderer struct {
 	TemplateDir      string
 	ErrorTemplateDir string
 	AssetHandler     asset.Handler
+	DelimLeft        string
+	DelimRight       string
 
 	errorTemplateMap map[int]string
 	errorLogCallback ErrorCallback
@@ -39,6 +42,11 @@ func NewAppRenderer() *AppRenderer {
 	return &AppRenderer{
 		errorTemplateMap: make(map[int]string, 0),
 	}
+}
+
+func (r *AppRenderer) SetDelims(left, right string) {
+	r.DelimLeft = left
+	r.DelimRight = right
 }
 
 // ServePage function
@@ -82,7 +90,11 @@ func (r *AppRenderer) Template(name string, funcMap template.FuncMap) (*template
 	if err != nil {
 		return nil, err
 	}
-	return template.New(name).Funcs(funcMap).Parse(string(data))
+	tmpl := template.New(name)
+	if r.DelimLeft != "" || r.DelimRight != "" {
+		tmpl = tmpl.Delims(r.DelimLeft, r.DelimRight)
+	}
+	return tmpl.Funcs(funcMap).Parse(string(data))
 }
 
 // SetErrorLogCallback function
